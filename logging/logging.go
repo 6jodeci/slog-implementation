@@ -2,23 +2,13 @@ package logging
 
 import (
 	"context"
-	"io"
 	"os"
-	"time"
 
 	"log/slog"
 )
 
 type logger struct {
 	*slog.Logger
-	StartTime time.Time
-	Logs      []LogEntry
-}
-
-type LogEntry struct {
-	Level     string
-	Message   string
-	Timestamp time.Time
 }
 
 type Logger interface {
@@ -32,11 +22,10 @@ type Logger interface {
 	LogAttrs(ctx context.Context, level slog.Level, msg string, attrs ...slog.Attr)
 	Warn(msg string, args ...interface{})
 	WarnContext(ctx context.Context, msg string, args ...interface{})
-	Flush() error
 }
 
 func GetLogger(ctx context.Context) Logger {
-	return loggerFromContext(ctx)
+	return LoggerFromContext(ctx)
 }
 
 func NewLogger() *logger {
@@ -44,7 +33,7 @@ func NewLogger() *logger {
 		Level: slog.LevelInfo,
 	}
 
-	handler := slog.NewTextHandler(os.Stdout, &handlerOpts)
+	handler := slog.NewJSONHandler(os.Stdout, &handlerOpts)
 
 	slogger := slog.New(handler)
 
@@ -91,11 +80,4 @@ func (l *logger) Warn(msg string, args ...interface{}) {
 
 func (l *logger) WarnContext(ctx context.Context, msg string, args ...interface{}) {
 	l.Logger.WarnContext(ctx, msg, args...)
-}
-
-func (l *logger) Flush() error {
-	if f, ok := l.Logger.Handler().(io.Writer); ok {
-		return f.(*os.File).Sync()
-	}
-	return nil
 }
